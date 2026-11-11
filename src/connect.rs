@@ -418,6 +418,17 @@ where {
         self.verbose.0 = enabled;
     }
 
+    pub(crate) fn set_linger(&mut self, dur: Option<Duration>) {
+        match &mut self.inner {
+            #[cfg(feature = "__native-tls")]
+            Inner::NativeTls(http, _tls) => http.set_linger(dur),
+            #[cfg(feature = "__rustls")]
+            Inner::RustlsTls { http, .. } => http.set_linger(dur),
+            #[cfg(not(feature = "__tls"))]
+            Inner::Http(http) => http.set_linger(dur),
+        }
+    }
+
     pub(crate) fn set_keepalive(&mut self, dur: Option<Duration>) {
         match &mut self.inner {
             #[cfg(feature = "__native-tls")]

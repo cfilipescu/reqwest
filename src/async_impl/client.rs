@@ -173,6 +173,7 @@ struct Config {
     connection_verbose: bool,
     pool_idle_timeout: Option<Duration>,
     pool_max_idle_per_host: usize,
+    tcp_linger: Option<Duration>,
     tcp_keepalive: Option<Duration>,
     tcp_keepalive_interval: Option<Duration>,
     tcp_keepalive_retries: Option<u32>,
@@ -305,6 +306,7 @@ impl ClientBuilder {
                 connection_verbose: false,
                 pool_idle_timeout: Some(Duration::from_secs(90)),
                 pool_max_idle_per_host: usize::MAX,
+                tcp_linger: None,
                 tcp_keepalive: Some(Duration::from_secs(15)),
                 tcp_keepalive_interval: Some(Duration::from_secs(15)),
                 tcp_keepalive_retries: Some(3),
@@ -929,6 +931,7 @@ impl ClientBuilder {
 
         connector_builder.set_timeout(config.connect_timeout);
         connector_builder.set_verbose(config.connection_verbose);
+        connector_builder.set_linger(config.tcp_linger);
         connector_builder.set_keepalive(config.tcp_keepalive);
         connector_builder.set_keepalive_interval(config.tcp_keepalive_interval);
         connector_builder.set_keepalive_retries(config.tcp_keepalive_retries);
@@ -1728,6 +1731,23 @@ impl ClientBuilder {
     /// Default is `true`.
     pub fn tcp_nodelay(mut self, enabled: bool) -> ClientBuilder {
         self.config.nodelay = enabled;
+        self
+    }
+
+    /// Set the linger duration for TCP sockets with `SO_LINGER`.
+    ///
+    /// Defaults to `None`, leaving the socket's linger option unchanged.
+    /// A zero duration resets the connection on close and discards unsent data.
+    /// A nonzero duration may block socket closure while pending data is sent.
+    /// This option does not close active requests or disable connection pooling.
+    /// It does not apply to Unix sockets, Windows named pipes, or HTTP/3.
+    /// If the platform rejects the option, a warning is logged and the
+    /// connection attempt continues.
+    pub fn tcp_linger<D>(mut self, val: D) -> ClientBuilder
+    where
+        D: Into<Option<Duration>>,
+    {
+        self.config.tcp_linger = val.into();
         self
     }
 
